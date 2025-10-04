@@ -87,21 +87,29 @@ export const TablePlus = Table.extend<TablePlusOptions>({
                 // Check for is going to remove
                 let _from = step.from - (position - currentPosition);
                 let _to = step.to - (position - currentPosition);
-
+  
+                if (_from < 0 || _to < 0) {
+                  return false;
+                }
+  
+                if (_from > oldState.doc.content.size || _to > oldState.doc.content.size) {
+                  return false;
+                }
+  
                 let _table = findParentNodeOfType(
                   oldState,
                   _from,
                   this.type
                 );
                 if (!_table) return false;
-
+  
                 let tableAlreadyExist = tables.find(
                   (table) => table.start === _table.start
                 );
                 if (!tableAlreadyExist) {
                   tables.push({ start: _table.start, node: _table.node });
                 }
-
+  
                 // check all table cells are going to replace
                 // Check for is going to add
                 let isAdd = false;
@@ -116,17 +124,17 @@ export const TablePlus = Table.extend<TablePlusOptions>({
                   );
                 }
                 if (isAdd) return true;
-
+  
                 let isRemove = isNodeAtRange(oldState, _from, _to, [
                   "tableCell",
                   "tableHeader",
                 ]);
-
+  
                 if (isRemove) return true;
-
+  
                 return false;
               });
-
+  
               if (_steps.length > 0 && tables.length == 1) {
                 let position = 0;
                 _steps.forEach((step) => {
@@ -134,10 +142,18 @@ export const TablePlus = Table.extend<TablePlusOptions>({
                   let currentPosition =
                     step.slice.content.size - (step.to - step.from);
                   position = position + currentPosition;
-
+  
                   // Check for is going to remove
                   let _from = step.from - (position - currentPosition);
                   let _to = step.to - (position - currentPosition);
+
+                  if (_from < 0 || _to < 0) {
+                    return false;
+                  }
+                  
+                  if (_from > oldState.doc.content.size || _to > oldState.doc.content.size) {
+                    return false;
+                  }
                   
                   let _table = findParentNodeOfType(
                     oldState,
@@ -152,7 +168,7 @@ export const TablePlus = Table.extend<TablePlusOptions>({
                   );
                   
                   if (!_table || !newStateTable) return false;
-
+  
                   let tableRow: {
                     from: number;
                     to: number;
@@ -185,7 +201,7 @@ export const TablePlus = Table.extend<TablePlusOptions>({
                     // get existing size list
                     let columnSize = getColumnSizeList(_table.node.attrs.columnSize);
                     let letCellList: {node: Node, from: number, to: number}[] = [];
-
+  
                     oldState.doc.nodesBetween(
                       tableRow.from,
                       tableRow.to,
@@ -198,22 +214,22 @@ export const TablePlus = Table.extend<TablePlusOptions>({
                         }
                       }
                     );
-
+  
                     if(letCellList.length == columnSize.length) {
                       let removeFromToIndex = { from: 0, count: 0 };
-
+  
                       if(step.to > step.from) {
                         let removeCellIndex: number[] = [];
-
+  
                         letCellList.forEach((cell, index) => {
                           if(cell.from >= step.from && cell.to <= step.to) {
                             removeCellIndex.push(index);
                           }
                         });
-
+  
                         removeFromToIndex = { from: Math.min(...removeCellIndex), count: removeCellIndex.length };
                       }
-
+  
                       let addNodes: Node[] = [];
                       if (
                         step.slice.content &&
@@ -228,9 +244,9 @@ export const TablePlus = Table.extend<TablePlusOptions>({
                       let columnAfterRemove = columnSize.slice(0, removeFromToIndex.from).concat(columnSize.slice(removeFromToIndex.from + removeFromToIndex.count));
                       
                       let newColumnWidth = addNodes.length > 0 ? Array(addNodes.length).fill(calculateNewColumnWidth(columnAfterRemove, addNodes.length)) : [];
-
+  
                       let newColumnSize = addColumns(columnAfterRemove, newColumnWidth as number[]);
-
+  
                       newState.doc.descendants((node, pos) => {
                         if (node.type.name === "table") {
                           if(newStateTable.pos === pos){
@@ -248,14 +264,12 @@ export const TablePlus = Table.extend<TablePlusOptions>({
                     }else{
                       // Calculate totally new column size
                     }
-
-
                   }
                 });
               }
             }
           });
-
+  
           return isThereUpdate ? tr : null;
         },
       }),
