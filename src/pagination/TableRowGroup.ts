@@ -19,9 +19,7 @@ export const TableRowGroup = Node.create({
     return ({ node }) => {
       const dom = document.createElement("div");
       dom.classList.add("table-row-group");
-      const tbody = document.createElement("tbody");
-      dom.appendChild(tbody);
-      return { dom, contentDOM: tbody };
+      return { dom, contentDOM: dom };
     };
   },
   renderHTML() {
@@ -37,7 +35,11 @@ export const TableRowGroup = Node.create({
         appendTransaction(_, oldState, newState) {
           const { doc, tr } = newState;
 
-          let modified = false;
+          const replacements: {
+            pos: number;
+            size: number;
+            newNode: ProseMirrorNode;
+          }[] = [];
 
           doc.descendants((tableNode, pos) => {
             if (tableNode.type.name !== "table") return false;
@@ -67,27 +69,27 @@ export const TableRowGroup = Node.create({
               rowSpanList[i + 1] = getMaximumRowSpan(rows[i]);
             }
             const rowGroupList = mergeOverlappingGroups(
-              getRowGroupList(rows.length, rowSpanList)
+              getRowGroupList(rows.length, rowSpanList),
             );
             const newRowGroupStructure: Record<number, number> = Object.assign(
               {},
-              rowGroupList.map((group) => group.length)
+              rowGroupList.map((group) => group.length),
             );
 
             if (!deepMatch(oldRowGroupStructure, newRowGroupStructure)) {
               const nodeType = editor.schema.nodes.tableRowGroup;
               const rowGroupMoreThanOne = rowGroupList.findIndex(
-                (group) => group.length > 1
+                (group) => group.length > 1,
               );
               for (let i = 0; i < rowGroupList.length; i++) {
                 const rowGroup = rows.slice(
                   Math.min(...rowGroupList[i]) - 1,
-                  Math.max(...rowGroupList[i])
+                  Math.max(...rowGroupList[i]),
                 );
                 if (rowGroup.length > 0) {
                   if (rowGroupMoreThanOne !== -1) {
                     rowGroups.push(
-                      nodeType.createAndFill(null, rowGroup) as ProseMirrorNode
+                      nodeType.createAndFill(null, rowGroup) as ProseMirrorNode,
                     );
                   } else {
                     rowGroups.push(rowGroup[0] as ProseMirrorNode);
@@ -97,17 +99,28 @@ export const TableRowGroup = Node.create({
               const tableNodeType = editor.schema.nodes.table;
               const tableNodeNew = tableNodeType.createAndFill(
                 null,
-                rowGroups
+                rowGroups,
               ) as ProseMirrorNode;
-              tr.replaceWith(pos, pos + tableNode.nodeSize, tableNodeNew);
-
-              modified = true;
+              replacements.push({
+                pos,
+                size: tableNode.nodeSize,
+                newNode: tableNodeNew,
+              });
             }
 
             return false; // Do not descend into table children
           });
 
-          return modified ? tr : null;
+          if (replacements.length === 0) return null;
+
+          // Apply replacements in reverse position order so earlier replacements
+          // don't invalidate positions of later ones in the same transaction.
+          replacements.sort((a, b) => b.pos - a.pos);
+          for (const { pos, size, newNode } of replacements) {
+            tr.replaceWith(pos, pos + size, newNode);
+          }
+
+          return tr;
         },
       }),
     ];
@@ -154,7 +167,7 @@ function deepMatch(obj1: Record<number, number>, obj2: Record<number, number>) {
 
 export const getRowGroupList = (
   totalRows: number,
-  rowSpanList: Record<number, number>
+  rowSpanList: Record<number, number>,
 ) => {
   const rowGroupListWithRowCount = [];
 
@@ -182,7 +195,7 @@ export const mergeOverlappingGroups = (inputGroups: number[][]): number[][] => {
     for (let i = 0; i < result.length; i++) {
       const existingSet = new Set(result[i]);
       const intersection = Array.from(groupSet).some((val) =>
-        existingSet.has(val)
+        existingSet.has(val),
       );
 
       if (intersection) {
