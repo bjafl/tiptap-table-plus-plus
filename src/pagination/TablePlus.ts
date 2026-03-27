@@ -1,4 +1,4 @@
-import Table from "@tiptap/extension-table";
+import { Table, TableOptions } from "@tiptap/extension-table";
 import { mergeAttributes } from "@tiptap/core";
 import { DOMOutputSpec } from "@tiptap/pm/model";
 import { TableRowGroup } from "./TableRowGroup";
@@ -16,6 +16,12 @@ import {
   getColumnSizeList,
 } from "../utilities/utils";
 import { Node } from "@tiptap/pm/model";
+
+export interface TablePlusOptions extends TableOptions {
+  resizeHandleStyle?: Partial<CSSStyleDeclaration>;
+  minColumnSize?: number;
+  borderColor?: string;
+}
 
 export const TablePlus = Table.extend<TablePlusOptions>({
   content: "(tableRowGroup|tableRow)+",
