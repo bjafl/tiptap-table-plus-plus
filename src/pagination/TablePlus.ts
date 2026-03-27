@@ -7,7 +7,14 @@ import { TablePlusNodeView } from "./TablePlusNodeView";
 import { TablePlusOptions } from "./types";
 import { Plugin, PluginKey } from "@tiptap/pm/state";
 import { ReplaceStep } from "prosemirror-transform";
-import { findParentNodeOfType, findParentNodeOfTypeAtPos, calculateNewColumnWidth, addColumns, isNodeAtRange, getColumnSizeList } from "../utilities/utils";
+import {
+  findParentNodeOfType,
+  findParentNodeOfTypeAtPos,
+  calculateNewColumnWidth,
+  addColumns,
+  isNodeAtRange,
+  getColumnSizeList,
+} from "../utilities/utils";
 import { Node } from "@tiptap/pm/model";
 
 export const TablePlus = Table.extend<TablePlusOptions>({
@@ -23,10 +30,7 @@ export const TablePlus = Table.extend<TablePlusOptions>({
     };
   },
   addExtensions() {
-    return [
-      TableRowGroup,
-      TableCommandExtension,
-    ]
+    return [TableRowGroup, TableCommandExtension];
   },
   addAttributes() {
     return {
@@ -37,7 +41,7 @@ export const TablePlus = Table.extend<TablePlusOptions>({
           let columnSize = element.getAttribute("data-column-size") || "";
           let columnSizeList = columnSize.split(",");
           const isAllNumber = columnSizeList.every(
-            (a: string) => !isNaN(Number(a))
+            (a: string) => !isNaN(Number(a)),
           );
           if (!isAllNumber) {
             columnSizeList = [];
@@ -87,17 +91,30 @@ export const TablePlus = Table.extend<TablePlusOptions>({
                 // Check for is going to remove
                 let _from = step.from - (position - currentPosition);
                 let _to = step.to - (position - currentPosition);
-                if(oldState.doc.content.size < _from || oldState.doc.content.size < _to || (_from < 0 || _to < 0)) return false;
+                if (
+                  oldState.doc.content.size < _from ||
+                  oldState.doc.content.size < _to ||
+                  _from < 0 ||
+                  _to < 0
+                )
+                  return false;
 
-                let _table = findParentNodeOfType(
-                  oldState,
-                  _from,
-                  this.type
-                );
+                if (_from < 0 || _to < 0) {
+                  return false;
+                }
+
+                if (
+                  _from > oldState.doc.content.size ||
+                  _to > oldState.doc.content.size
+                ) {
+                  return false;
+                }
+
+                let _table = findParentNodeOfType(oldState, _from, this.type);
                 if (!_table) return false;
 
                 let tableAlreadyExist = tables.find(
-                  (table) => table.start === _table.start
+                  (table) => table.start === _table.start,
                 );
                 if (!tableAlreadyExist) {
                   tables.push({ start: _table.start, node: _table.node });
@@ -113,7 +130,7 @@ export const TablePlus = Table.extend<TablePlusOptions>({
                   step.slice.content.content.length > 0
                 ) {
                   isAdd = step.slice.content.content.every((node) =>
-                    ["tableCell", "tableHeader"].includes(node.type.name)
+                    ["tableCell", "tableHeader"].includes(node.type.name),
                   );
                 }
                 if (isAdd) return true;
@@ -139,19 +156,30 @@ export const TablePlus = Table.extend<TablePlusOptions>({
                   // Check for is going to remove
                   let _from = step.from - (position - currentPosition);
                   let _to = step.to - (position - currentPosition);
-                  
-                  let _table = findParentNodeOfType(
-                    oldState,
-                    _from,
-                    this.type
-                  );
-                  
+
+                  if (_from < 0 || _to < 0) {
+                    return false;
+                  }
+
+                  if (
+                    _from > oldState.doc.content.size ||
+                    _to > oldState.doc.content.size
+                  ) {
+                    return false;
+                  }
+
+                  let _table = findParentNodeOfType(oldState, _from, this.type);
+
+                  if (step.from < 0 || step.from > newState.doc.content.size) {
+                    return false;
+                  }
+
                   let newStateTable = findParentNodeOfTypeAtPos(
                     step.from,
                     newState.doc,
-                    this.type
+                    this.type,
                   );
-                  
+
                   if (!_table || !newStateTable) return false;
 
                   let tableRow: {
@@ -179,40 +207,54 @@ export const TablePlus = Table.extend<TablePlusOptions>({
                         };
                         return true;
                       }
-                    }
+                    },
                   );
                   if (tableRow.node == null) return;
                   if (_from >= tableRow.from && _to <= tableRow.to) {
                     // get existing size list
-                    let columnSize = getColumnSizeList(_table.node.attrs.columnSize);
-                    let letCellList: {node: Node, from: number, to: number}[] = [];
+                    let columnSize = getColumnSizeList(
+                      _table.node.attrs.columnSize,
+                    );
+                    let letCellList: {
+                      node: Node;
+                      from: number;
+                      to: number;
+                    }[] = [];
 
                     oldState.doc.nodesBetween(
                       tableRow.from,
                       tableRow.to,
                       (node, pos) => {
                         if (
-                          node.type.name === "tableCell" || node.type.name === "tableHeader"
+                          node.type.name === "tableCell" ||
+                          node.type.name === "tableHeader"
                         ) {
-                          letCellList.push({node: node, from: pos, to: (pos + node.nodeSize)});
+                          letCellList.push({
+                            node: node,
+                            from: pos,
+                            to: pos + node.nodeSize,
+                          });
                           return true;
                         }
-                      }
+                      },
                     );
 
-                    if(letCellList.length == columnSize.length) {
+                    if (letCellList.length == columnSize.length) {
                       let removeFromToIndex = { from: 0, count: 0 };
 
-                      if(step.to > step.from) {
+                      if (step.to > step.from) {
                         let removeCellIndex: number[] = [];
 
                         letCellList.forEach((cell, index) => {
-                          if(cell.from >= step.from && cell.to <= step.to) {
+                          if (cell.from >= step.from && cell.to <= step.to) {
                             removeCellIndex.push(index);
                           }
                         });
 
-                        removeFromToIndex = { from: Math.min(...removeCellIndex), count: removeCellIndex.length };
+                        removeFromToIndex = {
+                          from: Math.min(...removeCellIndex),
+                          count: removeCellIndex.length,
+                        };
                       }
 
                       let addNodes: Node[] = [];
@@ -223,20 +265,39 @@ export const TablePlus = Table.extend<TablePlusOptions>({
                         step.slice.content.content.length > 0
                       ) {
                         addNodes = step.slice.content.content.filter((node) =>
-                          ["tableCell", "tableHeader"].includes(node.type.name)
+                          ["tableCell", "tableHeader"].includes(node.type.name),
                         );
                       }
-                      let columnAfterRemove = columnSize.slice(0, removeFromToIndex.from).concat(columnSize.slice(removeFromToIndex.from + removeFromToIndex.count));
-                      
-                      let newColumnWidth = addNodes.length > 0 ? Array(addNodes.length).fill(calculateNewColumnWidth(columnAfterRemove, addNodes.length)) : [];
+                      let columnAfterRemove = columnSize
+                        .slice(0, removeFromToIndex.from)
+                        .concat(
+                          columnSize.slice(
+                            removeFromToIndex.from + removeFromToIndex.count,
+                          ),
+                        );
 
-                      let newColumnSize = addColumns(columnAfterRemove, newColumnWidth as number[]);
+                      let newColumnWidth =
+                        addNodes.length > 0
+                          ? Array(addNodes.length).fill(
+                              calculateNewColumnWidth(
+                                columnAfterRemove,
+                                addNodes.length,
+                              ),
+                            )
+                          : [];
+
+                      let newColumnSize = addColumns(
+                        columnAfterRemove,
+                        newColumnWidth as number[],
+                      );
 
                       newState.doc.descendants((node, pos) => {
                         if (node.type.name === "table") {
-                          if(newStateTable.pos === pos){
+                          if (newStateTable.pos === pos) {
                             // Update/add an attribute
-                            if (node.attrs.columnSize !== newColumnSize.join(",")) {
+                            if (
+                              node.attrs.columnSize !== newColumnSize.join(",")
+                            ) {
                               tr = tr.setNodeMarkup(pos, undefined, {
                                 ...node.attrs,
                                 columnSize: newColumnSize.join(","),
@@ -246,11 +307,9 @@ export const TablePlus = Table.extend<TablePlusOptions>({
                           }
                         }
                       });
-                    }else{
+                    } else {
                       // Calculate totally new column size
                     }
-
-
                   }
                 });
               }
