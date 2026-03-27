@@ -2,8 +2,10 @@
   "name": "tiptap-table-plus",
   "version": "2.1.0",
   "description": "Tiptap table extra options like duplicate column, duplicate row etc...",
-  "main": "dist/index.js",
-  "types": "dist/index.d.ts",
+  "type": "module",
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
   "files": [
     "dist",
     "README.md",
