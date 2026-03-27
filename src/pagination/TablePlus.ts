@@ -1,10 +1,12 @@
-import { Table, TableOptions } from "@tiptap/extension-table";
+import {
+  Table as TipTapTable,
+  TableOptions as TipTapTableOptions,
+} from "@tiptap/extension-table";
 import { mergeAttributes } from "@tiptap/core";
 import { DOMOutputSpec } from "@tiptap/pm/model";
 import { TableRowGroup } from "./TableRowGroup";
 import { TableCommandExtension } from "../TableCommandExtension";
 import { TablePlusNodeView } from "./TablePlusNodeView";
-import { TablePlusOptions } from "./types";
 import { Plugin, PluginKey } from "@tiptap/pm/state";
 import { ReplaceStep } from "prosemirror-transform";
 import {
@@ -17,13 +19,13 @@ import {
 } from "../utilities/utils";
 import { Node } from "@tiptap/pm/model";
 
-export interface TablePlusOptions extends TableOptions {
+export interface TablePlusOptions extends Partial<TipTapTableOptions> {
   resizeHandleStyle?: Partial<CSSStyleDeclaration>;
   minColumnSize?: number;
   borderColor?: string;
 }
 
-export const TablePlus = Table.extend<TablePlusOptions>({
+export const TablePlus = TipTapTable.extend<TablePlusOptions>({
   content: "(tableRowGroup|tableRow)+",
   addOptions() {
     return {
@@ -65,7 +67,8 @@ export const TablePlus = Table.extend<TablePlusOptions>({
   renderHTML({ node, HTMLAttributes }) {
     const table: DOMOutputSpec = [
       "table",
-      mergeAttributes(this.options.HTMLAttributes, HTMLAttributes, {
+      mergeAttributes(this.options.HTMLAttributes!, HTMLAttributes, {
+        //TODO: can HTMLAttributes be undefined?
         border: 1,
       }),
       0,

@@ -1,10 +1,10 @@
-import TiptapTable from "@tiptap/extension-table";
+import { Table as TiptapTable } from "@tiptap/extension-table";
 import { TableCell as TableCellPlus } from "@tiptap/extension-table-cell";
 import { TableHeader as TableHeaderPlus } from "@tiptap/extension-table-header";
 import { TableRow as TableRowPlus } from "@tiptap/extension-table-row";
 import TableCommandExtension from "./TableCommandExtension";
 
-export const TablePlus = Table.extend({
+export const TablePlus = TiptapTable.extend({
   addExtensions() {
     return [TableCommandExtension];
   },
