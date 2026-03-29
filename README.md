@@ -1,97 +1,58 @@
 
-# Tiptap Table Plus
-[![NPM](https://img.shields.io/npm/v/tiptap-table-plus.svg)](https://www.npmjs.com/package/tiptap-table-plus)
+# Tiptap Table Plus Plus
 
-`tiptap-table-plus` | Tiptap table plus is an npm package that extends the table functionality of the Tiptap editor by adding two new commands: `duplicateColumn` and `duplicateRow`.
+Extended version of [tiptap-table-plus](https://github.com/RomikMakavana/tiptap-table-plus), adding support for **table/row/cell styling**, **per-side borders**, and **inline CSS parsing** on top of the original column/row duplication and pagination features.
 
-Demo : https://romikmakavana.me/tiptap/table-plus/example
+## What's New (vs. tiptap-table-plus)
 
-Documentation : https://romikmakavana.me/tiptap/table-plus
+- **Per-side border attributes** on tables, rows, and cells (`borderTop`, `borderRight`, `borderBottom`, `borderLeft`)
+- **Styling attributes** — `backgroundColor`, `padding`, `textAlign`, `verticalAlign`, `width`, `height`
+- **Border collapsing & normalization** — table/row borders automatically inherit down to cells; adjacent borders are collapsed so each shared edge is stored once
+- **CSS inline style parser** — zero-dependency parser that reads inline `style` attributes, expands shorthand (e.g. `border`, `padding`, `margin`), and returns atomic values
 
+All original features are preserved: `duplicateColumn`, `duplicateRow`, column resizing, row grouping, and pagination support.
 
 ## Installation
 
-This package supports both TipTap v2 and TipTap v3. Choose the appropriate installation command based on your TipTap version:
-
-### For TipTap v3 (Recommended)
+Tiptap **v3** only.
 
 ```bash
-# Install latest version (defaults to TipTap v3)
-npm install tiptap-table-plus
-
-# Or explicitly install the tiptap-v3 tag
-npm install tiptap-table-plus@tiptap-v3
+npm install tiptap-table-plus-plus
 ```
 
-### For TipTap v2
+### Peer Dependencies
 
 ```bash
-npm install tiptap-table-plus@tiptap-v2
+npm install @tiptap/core @tiptap/extension-table @tiptap/extension-table-cell @tiptap/extension-table-header @tiptap/extension-table-row @tiptap/pm
 ```
 
-**Note:** Both versions are maintained and updated with each release. The `latest` tag (default) points to the TipTap v3 compatible version.  
+## Usage
 
-## Peer Dependencies
-
-This package works with peer dependencies. The required packages differ based on your TipTap version:
-
-### For TipTap v3
-
-TipTap v3 bundles table extensions into a single package. Install the following:
-
-```bash
-npm install @tiptap/extension-table @tiptap/pm
-```
-
-### For TipTap v2
-
-TipTap v2 uses separate packages for each table extension. Install the following:
-
-```bash
-npm install @tiptap/extension-table @tiptap/extension-table-cell @tiptap/extension-table-header @tiptap/extension-table-row @tiptap/pm
-```
-
-**Note**: Make sure you have these peer dependencies installed as they are required for the package to function properly. The package will not work without these Tiptap extensions and ProseMirror.
-
-# Without Pagination
-
-| Command           | Parameters              | Default | Description                                                                                                 |
-| ----------------- | ----------------------- | ------- | ----------------------------------------------------------------------------------------------------------- |
-| `duplicateColumn` | `withContent` (boolean) | `true`  | Duplicates the current column. If `true`, copies column content; if `false`, only duplicates the structure. |
-| `duplicateRow`    | `withContent` (boolean) | `true`  | Duplicates the current row. If `true`, copies row content; if `false`, only duplicates the structure.       |
-
-
-### Example
-
-Here are examples of how to use these commands in your Tiptap editor setup:
-
-#### For TipTap v3
+### Without Pagination
 
 ```js
 import { Editor } from '@tiptap/core';
-import { Table, TableRow, TableCell, TableHeader } from '@tiptap/extension-table';
-import { WithoutPagination } from 'tiptap-table-plus';
+import { WithoutPagination } from 'tiptap-table-plus-plus';
 
-const { TableKitPlus } = WithoutPagination;
+const { TablePlus, TableCellPlus, TableHeaderPlus, TableRowPlus } = WithoutPagination;
 
 const editor = new Editor({
   extensions: [
-    TableKitPlus
+    TablePlus,
+    TableCellPlus,
+    TableHeaderPlus,
+    TableRowPlus,
   ],
-  content: '<table border="1"><tr><th colspan="1" rowspan="1"><p>Name</p></th><th colspan="1" rowspan="1"><p>Region</p></th><th colspan="1" rowspan="1"><p>Country</p></th></tr><tr><td colspan="1" rowspan="1"><p>Liberty Hays</p></td><td colspan="1" rowspan="1"><p>Araucanía</p></td><td colspan="1" rowspan="1"><p>Canada</p></td></tr></table>',
+  content: '<table><tr><th><p>Name</p></th><th><p>Country</p></th></tr><tr><td><p>Alice</p></td><td><p>Norway</p></td></tr></table>',
 });
 ```
 
-#### For TipTap v2
+### With Pagination
 
 ```js
 import { Editor } from '@tiptap/core';
-import TableRow from '@tiptap/extension-table-row';
-import TableCell from '@tiptap/extension-table-cell';
-import TableHeader from '@tiptap/extension-table-header';
-import { WithoutPagination } from 'tiptap-table-plus';
-
-const { TablePlus, TableRowPlus, TableCellPlus, TableHeaderPlus } = WithoutPagination;
+import { TablePlus, TableCellPlus, TableHeaderPlus, TableRowPlus } from 'tiptap-table-plus-plus';
+import { PaginationPlus } from 'tiptap-pagination-plus';
 
 const editor = new Editor({
   extensions: [
@@ -99,81 +60,77 @@ const editor = new Editor({
     TableRowPlus,
     TableCellPlus,
     TableHeaderPlus,
+    PaginationPlus,
   ],
-  content: '<table border="1"><tr><th colspan="1" rowspan="1"><p>Name</p></th><th colspan="1" rowspan="1"><p>Region</p></th><th colspan="1" rowspan="1"><p>Country</p></th></tr><tr><td colspan="1" rowspan="1"><p>Liberty Hays</p></td><td colspan="1" rowspan="1"><p>Araucanía</p></td><td colspan="1" rowspan="1"><p>Canada</p></td></tr></table>',
 });
 ```
 
----------------
----------------
----------------
+## Commands
 
-# Pagination Table Support
+| Command           | Parameters              | Default | Description                                                        |
+| ----------------- | ----------------------- | ------- | ------------------------------------------------------------------ |
+| `duplicateColumn` | `withContent` (boolean) | `true`  | Duplicate the current column, optionally copying content.          |
+| `duplicateRow`    | `withContent` (boolean) | `true`  | Duplicate the current row, optionally copying content.             |
 
-The package now includes advanced pagination table support with automatic row grouping based on rowspan logic. This feature automatically organizes table rows into logical groups for better pagination and display.
+## Styling Attributes
 
-Tiptap Pagination : https://romikmakavana.me/tiptap/pagination-plus/
+Attributes are parsed from inline `style` on the HTML element and serialized back on render.
 
-## Features
+### Cell (`<td>` / `<th>`)
 
-- **Automatic Row Grouping**: Intelligently groups table rows based on rowspan attributes
-- **Enhanced Table Structure**: Supports both direct table rows and grouped table rows
-- **Smart Pagination**: Automatically handles complex table layouts with merged cells
-- **CSS Custom Properties**: Provides CSS variables for styling and layout control
-- **Column Resize Support** – Allows users to interactively adjust column widths for better readability
+| Attribute        | Example Value          |
+| ---------------- | ---------------------- |
+| `backgroundColor`| `#f0f0f0`              |
+| `padding`        | `8px 4px`              |
+| `textAlign`      | `center`               |
+| `verticalAlign`  | `middle`               |
+| `borderTop`      | `1px solid #000`       |
+| `borderRight`    | `1px solid #000`       |
+| `borderBottom`   | `1px solid #000`       |
+| `borderLeft`     | `1px solid #000`       |
 
-## Usage with Pagination
+### Row (`<tr>`)
 
-Here's how to set up the pagination table extension:
+| Attribute        | Example Value          |
+| ---------------- | ---------------------- |
+| `backgroundColor`| `#fafafa`              |
+| `height`         | `40px`                 |
+| `borderTop`      | `2px solid red`        |
+| `borderRight`    | `2px solid red`        |
+| `borderBottom`   | `2px solid red`        |
+| `borderLeft`     | `2px solid red`        |
 
-#### For TipTap v3
+### Table (`<table>`)
 
-```js
-import { Editor } from '@tiptap/core';
-import { Table, TableRow, TableCell, TableHeader } from '@tiptap/extension-table';
-import { TableKitPlus } from 'tiptap-table-plus';
-import { PaginationPlus } from "tiptap-pagination-plus";
+| Attribute        | Example Value          |
+| ---------------- | ---------------------- |
+| `width`          | `100%`                 |
+| `backgroundColor`| `white`                |
+| `columnSize`     | `25,25,25,25`          |
+| `borderTop`      | `1px solid #ccc`       |
+| `borderRight`    | `1px solid #ccc`       |
+| `borderBottom`   | `1px solid #ccc`       |
+| `borderLeft`     | `1px solid #ccc`       |
 
-const editor = new Editor({
-  extensions: [
-    TableKitPlus, // TipTap v3 only - includes TableRowPlus, TableCellPlus, TableHeaderPlus
-    PaginationPlus
-  ],
-  content: '<table border="1"><tr><th colspan="1" rowspan="1"><p>Name</p></th><th colspan="1" rowspan="1"><p>Region</p></th><th colspan="1" rowspan="1"><p>Country</p></th></tr><tr><td colspan="1" rowspan="1"><p>Liberty Hays</p></td><td colspan="1" rowspan="1"><p>Araucanía</p></td><td colspan="1" rowspan="1"><p>Canada</p></td></tr></table>',
-});
-```
+## Border Inheritance & Collapsing
 
-**Note for TipTap v3**: `TableKitPlus` is a convenience extension that includes `TableRowPlus`, `TableCellPlus`, and `TableHeaderPlus`. You can use either `TableKitPlus` or import the individual extensions separately.
+Borders follow a top-down inheritance model and are automatically normalized:
 
-#### For TipTap v2
+1. **Table borders** are distributed to outer-edge cells only.
+2. **Row borders** — `borderTop`/`borderBottom` go to all cells in the row; `borderLeft`/`borderRight` go to the first/last cell.
+3. **Cell borders** take highest priority.
+4. Adjacent cell borders are **collapsed** so each shared edge is stored once (the top/left cell owns it).
 
-```js
-import { Editor } from '@tiptap/core';
-import { TablePlus, TableRowPlus, TableCellPlus, TableHeaderPlus } from 'tiptap-table-plus';
-import { PaginationPlus } from "tiptap-pagination-plus";
+The normalization runs as a ProseMirror plugin after every transaction — no manual steps needed.
 
-const editor = new Editor({
-  extensions: [
-    TablePlus,
-    TableRowPlus,
-    TableCellPlus,
-    TableHeaderPlus,
-    PaginationPlus
-  ],
-  content: '<table border="1"><tr><th colspan="1" rowspan="1"><p>Name</p></th><th colspan="1" rowspan="1"><p>Region</p></th><th colspan="1" rowspan="1"><p>Country</p></th></tr><tr><td colspan="1" rowspan="1"><p>Liberty Hays</p></td><td colspan="1" rowspan="1"><p>Araucanía</p></td><td colspan="1" rowspan="1"><p>Canada</p></td></tr></table>',
-});
-```
+## Pagination Features
 
-## How It Works
+When used with `tiptap-pagination-plus`:
 
-The pagination system automatically:
+- **Automatic row grouping** based on `rowspan` attributes — related rows stay together across page breaks
+- **Interactive column resizing** with drag handles
+- **CSS custom properties** (`--cell-percentage`) for layout control
 
-1. **Analyzes Table Structure**: Examines rowspan attributes and table layout
-2. **Groups Related Rows**: Creates logical groups based on merged cells
-3. **Optimizes Pagination**: Ensures related content stays together across page breaks
-4. **Maintains Consistency**: Automatically updates grouping when table structure changes
+## License
 
-
-# License
-This package is open-sourced software licensed under the MIT license.
-
+MIT — based on [tiptap-table-plus](https://github.com/RomikMakavana/tiptap-table-plus) by Romik Makavana.
