@@ -1,14 +1,14 @@
 import {
   Table as TipTapTable,
   TableOptions as TipTapTableOptions,
-} from "@tiptap/extension-table";
-import { mergeAttributes } from "@tiptap/core";
-import { DOMOutputSpec } from "@tiptap/pm/model";
-import { TableRowGroup } from "./TableRowGroup";
-import { TableCommandExtension } from "../TableCommandExtension";
-import { TablePlusNodeView } from "./TablePlusNodeView";
-import { Plugin, PluginKey } from "@tiptap/pm/state";
-import { ReplaceStep } from "prosemirror-transform";
+} from '@tiptap/extension-table';
+import { mergeAttributes } from '@tiptap/core';
+import { DOMOutputSpec } from '@tiptap/pm/model';
+import { TableRowGroup } from './TableRowGroup';
+import { TableCommandExtension } from '../TableCommandExtension';
+import { TablePlusNodeView } from './TablePlusNodeView';
+import { Plugin, PluginKey } from '@tiptap/pm/state';
+import { ReplaceStep } from 'prosemirror-transform';
 import {
   findParentNodeOfType,
   findParentNodeOfTypeAtPos,
@@ -16,8 +16,15 @@ import {
   addColumns,
   isNodeAtRange,
   getColumnSizeList,
-} from "../utilities/utils";
-import { Node } from "@tiptap/pm/model";
+} from '../utilities/utils';
+import { Node } from '@tiptap/pm/model';
+import {
+  widthAttr,
+  backgroundColorAttr,
+  borderAttrs,
+} from '../utilities/attributes';
+import { tableStyle } from '../utilities/renderStyle';
+import { normalizeTableBorders } from '../utilities/borderCollapse';
 
 export interface TablePlusOptions extends Partial<TipTapTableOptions> {
   resizeHandleStyle?: Partial<CSSStyleDeclaration>;
@@ -26,15 +33,15 @@ export interface TablePlusOptions extends Partial<TipTapTableOptions> {
 }
 
 export const TablePlus = TipTapTable.extend<TablePlusOptions>({
-  content: "(tableRowGroup|tableRow)+",
+  content: '(tableRowGroup|tableRow)+',
   addOptions() {
     return {
       ...this.parent?.(),
       resizeHandleStyle: {
-        background: "#353535",
+        background: '#353535',
       },
       minColumnSize: 50,
-      borderColor: "black",
+      borderColor: 'black',
     };
   },
   addExtensions() {
@@ -44,33 +51,47 @@ export const TablePlus = TipTapTable.extend<TablePlusOptions>({
     return {
       ...this.parent?.(),
       columnSize: {
-        default: "",
+        default: '',
         parseHTML: (element) => {
-          let columnSize = element.getAttribute("data-column-size") || "";
-          let columnSizeList = columnSize.split(",");
+          const columnSize = element.getAttribute('data-column-size') || '';
+          const columnSizeList = columnSize.split(',');
           const isAllNumber = columnSizeList.every(
-            (a: string) => !isNaN(Number(a)),
+            (a: string) => !isNaN(Number(a))
           );
-          if (!isAllNumber) {
-            columnSizeList = [];
-          }
-          return columnSizeList.join(",");
+          return isAllNumber ? columnSizeList.join(',') : '';
         },
         renderHTML: (attributes) => {
           return {
-            "data-column-size": attributes.columnSize,
+            'data-column-size': attributes.columnSize,
           };
         },
       },
+      width: widthAttr(false),
+      backgroundColor: backgroundColorAttr(false),
+      // Legacy <table border="N"> means every cell gets a border.
+      // Stored separately from borderAttrs (which are the table's own outer border).
+      defaultCellBorder: {
+        default: null,
+        keepOnSplit: false,
+        parseHTML: (el: HTMLElement) => {
+          const val = el.getAttribute('border');
+          if (!val || val === '0') return null;
+          const width = /^\d+$/.test(val) ? `${val}px` : val;
+          return `${width} solid`;
+        },
+        renderHTML: () => ({}), // not serialized back to HTML
+      },
+      ...borderAttrs(false),
     };
   },
   renderHTML({ node, HTMLAttributes }) {
     const table: DOMOutputSpec = [
-      "table",
-      mergeAttributes(this.options.HTMLAttributes!, HTMLAttributes, {
-        //TODO: can HTMLAttributes be undefined?
-        border: 1,
-      }),
+      'table',
+      mergeAttributes(
+        this.options.HTMLAttributes ?? {},
+        HTMLAttributes,
+        tableStyle(node.attrs)
+      ),
       0,
     ];
     return table;
@@ -82,7 +103,29 @@ export const TablePlus = TipTapTable.extend<TablePlusOptions>({
   addProseMirrorPlugins() {
     return [
       new Plugin({
-        key: new PluginKey("tablePlusPlugin"),
+        key: new PluginKey('tableBorderNormalize'),
+        appendTransaction: (transactions, _oldState, newState) => {
+          console.log('Running table border normalization plugin...');
+          if (!transactions.some((t) => t.docChanged)) return null;
+
+          let tr = newState.tr;
+          let changed = false;
+
+          newState.doc.descendants((node, pos) => {
+            if (node.type.name !== 'table') return;
+
+            // normalizeTableBorders is idempotent — returns false
+            // when nothing changes, so always safe to call.
+            if (normalizeTableBorders(tr, pos)) {
+              changed = true;
+            }
+          });
+
+          return changed ? tr : null;
+        },
+      }),
+      new Plugin({
+        key: new PluginKey('tablePlusPlugin'),
         appendTransaction: (transactions, oldState, newState) => {
           let tr = newState.tr;
           let isThereUpdate = false;
@@ -123,7 +166,7 @@ export const TablePlus = TipTapTable.extend<TablePlusOptions>({
                 if (!_table) return false;
 
                 let tableAlreadyExist = tables.find(
-                  (table) => table.start === _table.start,
+                  (table) => table.start === _table.start
                 );
                 if (!tableAlreadyExist) {
                   tables.push({ start: _table.start, node: _table.node });
@@ -134,19 +177,19 @@ export const TablePlus = TipTapTable.extend<TablePlusOptions>({
                 let isAdd = false;
                 if (
                   step.slice.content &&
-                  "content" in step.slice.content &&
+                  'content' in step.slice.content &&
                   step.slice.content.content &&
                   step.slice.content.content.length > 0
                 ) {
                   isAdd = step.slice.content.content.every((node) =>
-                    ["tableCell", "tableHeader"].includes(node.type.name),
+                    ['tableCell', 'tableHeader'].includes(node.type.name)
                   );
                 }
                 if (isAdd) return true;
 
                 let isRemove = isNodeAtRange(oldState, _from, _to, [
-                  "tableCell",
-                  "tableHeader",
+                  'tableCell',
+                  'tableHeader',
                 ]);
 
                 if (isRemove) return true;
@@ -186,7 +229,7 @@ export const TablePlus = TipTapTable.extend<TablePlusOptions>({
                   let newStateTable = findParentNodeOfTypeAtPos(
                     step.from,
                     newState.doc,
-                    this.type,
+                    this.type
                   );
 
                   if (!_table || !newStateTable) return false;
@@ -205,7 +248,7 @@ export const TablePlus = TipTapTable.extend<TablePlusOptions>({
                     _table.end,
                     (node, pos) => {
                       if (
-                        node.type.name === "tableRow" &&
+                        node.type.name === 'tableRow' &&
                         (tableRow.node == null ||
                           tableRow.node.childCount < node.childCount)
                       ) {
@@ -216,13 +259,13 @@ export const TablePlus = TipTapTable.extend<TablePlusOptions>({
                         };
                         return true;
                       }
-                    },
+                    }
                   );
                   if (tableRow.node == null) return;
                   if (_from >= tableRow.from && _to <= tableRow.to) {
                     // get existing size list
                     let columnSize = getColumnSizeList(
-                      _table.node.attrs.columnSize,
+                      _table.node.attrs.columnSize
                     );
                     let letCellList: {
                       node: Node;
@@ -235,8 +278,8 @@ export const TablePlus = TipTapTable.extend<TablePlusOptions>({
                       tableRow.to,
                       (node, pos) => {
                         if (
-                          node.type.name === "tableCell" ||
-                          node.type.name === "tableHeader"
+                          node.type.name === 'tableCell' ||
+                          node.type.name === 'tableHeader'
                         ) {
                           letCellList.push({
                             node: node,
@@ -245,7 +288,7 @@ export const TablePlus = TipTapTable.extend<TablePlusOptions>({
                           });
                           return true;
                         }
-                      },
+                      }
                     );
 
                     if (letCellList.length == columnSize.length) {
@@ -269,20 +312,20 @@ export const TablePlus = TipTapTable.extend<TablePlusOptions>({
                       let addNodes: Node[] = [];
                       if (
                         step.slice.content &&
-                        "content" in step.slice.content &&
+                        'content' in step.slice.content &&
                         step.slice.content.content &&
                         step.slice.content.content.length > 0
                       ) {
                         addNodes = step.slice.content.content.filter((node) =>
-                          ["tableCell", "tableHeader"].includes(node.type.name),
+                          ['tableCell', 'tableHeader'].includes(node.type.name)
                         );
                       }
                       let columnAfterRemove = columnSize
                         .slice(0, removeFromToIndex.from)
                         .concat(
                           columnSize.slice(
-                            removeFromToIndex.from + removeFromToIndex.count,
-                          ),
+                            removeFromToIndex.from + removeFromToIndex.count
+                          )
                         );
 
                       let newColumnWidth =
@@ -290,26 +333,26 @@ export const TablePlus = TipTapTable.extend<TablePlusOptions>({
                           ? Array(addNodes.length).fill(
                               calculateNewColumnWidth(
                                 columnAfterRemove,
-                                addNodes.length,
-                              ),
+                                addNodes.length
+                              )
                             )
                           : [];
 
                       let newColumnSize = addColumns(
                         columnAfterRemove,
-                        newColumnWidth as number[],
+                        newColumnWidth as number[]
                       );
 
                       newState.doc.descendants((node, pos) => {
-                        if (node.type.name === "table") {
+                        if (node.type.name === 'table') {
                           if (newStateTable.pos === pos) {
                             // Update/add an attribute
                             if (
-                              node.attrs.columnSize !== newColumnSize.join(",")
+                              node.attrs.columnSize !== newColumnSize.join(',')
                             ) {
                               tr = tr.setNodeMarkup(pos, undefined, {
                                 ...node.attrs,
-                                columnSize: newColumnSize.join(","),
+                                columnSize: newColumnSize.join(','),
                               });
                               isThereUpdate = true;
                             }

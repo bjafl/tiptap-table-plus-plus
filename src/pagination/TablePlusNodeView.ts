@@ -1,5 +1,6 @@
-import { Node } from "@tiptap/pm/model";
-import { Editor } from "@tiptap/core";
+import { Node } from '@tiptap/pm/model';
+import { Editor } from '@tiptap/core';
+import { tableStyle } from '../utilities/renderStyle';
 export class TablePlusNodeView {
   node: Node;
   getPos: () => number | undefined;
@@ -23,31 +24,31 @@ export class TablePlusNodeView {
     this.getPos = getPos;
     this.editor = editor;
     this.options = options;
-    this.dom = document.createElement("div");
-    this.dom.style.position = "relative";
+    this.dom = document.createElement('div');
+    this.dom.style.position = 'relative';
 
     this.maxCellCount = 0;
     this.cellPercentage = [];
     this.handles = [];
-    this.slider = document.createElement("div");
-    this.slider.contentEditable = "false";
-    this.slider.style.width = "100%";
-    this.slider.style.position = "relative";
+    this.slider = document.createElement('div');
+    this.slider.contentEditable = 'false';
+    this.slider.style.width = '100%';
+    this.slider.style.position = 'relative';
     this.dom.appendChild(this.slider);
 
     this.updateNode(node);
 
-    this.contentDOM = document.createElement("table");
-    this.contentDOM.classList.add("table-plus");
-    this.contentDOM.style.flex = "1"; // allow child nodes to expand if needed
+    this.contentDOM = document.createElement('table');
+    this.contentDOM.classList.add('table-plus');
+    this.contentDOM.style.flex = '1'; // allow child nodes to expand if needed
+    Object.assign(this.contentDOM.style, tableStyle(node.attrs));
     this.dom.appendChild(this.contentDOM);
   }
 
   addHandles() {
-
     const dragHandle = (handle: HTMLElement) => {
       let startX = 0;
-      let handleIndex = parseInt(handle.dataset.index ?? "0");
+      let handleIndex = parseInt(handle.dataset.index ?? '0');
 
       const onMouseMove = (e: MouseEvent) => {
         let rect = this.slider.getBoundingClientRect();
@@ -56,9 +57,15 @@ export class TablePlusNodeView {
         let percent = Math.min(Math.max((x / rect.width) * 100, 0), 100);
 
         if (handleIndex > 0) {
-          let previousPixel = (parseFloat(this.handles[handleIndex - 1].style.left) * x / percent) + this.options.minColumnSize;
-          if(x < previousPixel) {
-            percent = Math.min(Math.max((previousPixel / rect.width) * 100, 0), 100);
+          let previousPixel =
+            (parseFloat(this.handles[handleIndex - 1].style.left) * x) /
+              percent +
+            this.options.minColumnSize;
+          if (x < previousPixel) {
+            percent = Math.min(
+              Math.max((previousPixel / rect.width) * 100, 0),
+              100
+            );
           }
           percent = Math.max(
             percent,
@@ -66,33 +73,39 @@ export class TablePlusNodeView {
           );
         }
         if (handleIndex < this.handles.length - 1) {
-          let nextPixel = (parseFloat(this.handles[handleIndex + 1].style.left) * x / percent) - this.options.minColumnSize;
-          if(x > nextPixel) {
-            percent = Math.min(Math.max((nextPixel / rect.width) * 100, 0), 100);
+          let nextPixel =
+            (parseFloat(this.handles[handleIndex + 1].style.left) * x) /
+              percent -
+            this.options.minColumnSize;
+          if (x > nextPixel) {
+            percent = Math.min(
+              Math.max((nextPixel / rect.width) * 100, 0),
+              100
+            );
           }
-          
+
           percent = Math.min(
             percent,
             parseFloat(this.handles[handleIndex + 1].style.left)
           );
         }
 
-        handle.style.left = percent + "%";
-        
+        handle.style.left = percent + '%';
+
         this.updateValues(this.getColumnSizes(this.handles), false);
       };
 
       const onMouseUp = () => {
-        document.removeEventListener("mousemove", onMouseMove);
-        document.removeEventListener("mouseup", onMouseUp);
+        document.removeEventListener('mousemove', onMouseMove);
+        document.removeEventListener('mouseup', onMouseUp);
         this.updateValues(this.getColumnSizes(this.handles), true);
       };
 
-      handle.addEventListener("mousedown", (e) => {
+      handle.addEventListener('mousedown', (e) => {
         e.preventDefault();
         startX = e.clientX;
-        document.addEventListener("mousemove", onMouseMove);
-        document.addEventListener("mouseup", onMouseUp);
+        document.addEventListener('mousemove', onMouseMove);
+        document.addEventListener('mouseup', onMouseUp);
       });
     };
 
@@ -100,16 +113,16 @@ export class TablePlusNodeView {
     for (let index = 0; index < this.cellPercentage.length; index++) {
       lastValue = lastValue + this.cellPercentage[index];
       if (index >= this.handles.length) {
-        const handle = document.createElement("div");
-        handle.className = "handle";
-        handle.style.position = "absolute";
-        handle.style.top = "50%";
-        handle.style.width = "12px";
-        handle.style.height = "12px";
-        handle.style.zIndex = "auto";
-        handle.style.borderRadius = "50%";
-        handle.style.transform = "translate(-50%, -50%)";
-        handle.style.cursor = "ew-resize";
+        const handle = document.createElement('div');
+        handle.className = 'handle';
+        handle.style.position = 'absolute';
+        handle.style.top = '50%';
+        handle.style.width = '12px';
+        handle.style.height = '12px';
+        handle.style.zIndex = 'auto';
+        handle.style.borderRadius = '50%';
+        handle.style.transform = 'translate(-50%, -50%)';
+        handle.style.cursor = 'ew-resize';
         Object.assign(handle.style, {
           ...this.options.resizeHandleStyle,
         });
@@ -123,7 +136,7 @@ export class TablePlusNodeView {
   }
 
   removeHandles() {
-    if(this.handles.length > this.cellPercentage.length) {
+    if (this.handles.length > this.cellPercentage.length) {
       const handle = this.handles[this.handles.length - 1];
       if (!handle) return;
 
@@ -132,7 +145,7 @@ export class TablePlusNodeView {
       this.handles.splice(this.handles.length - 1, 1);
 
       this.handles.forEach((h, i) => {
-          h.dataset.index = i.toString();
+        h.dataset.index = i.toString();
       });
     }
   }
@@ -161,15 +174,15 @@ export class TablePlusNodeView {
     this.columnSize = node.attrs.columnSize;
     let _maxCellCount = 0;
     node.forEach((child) => {
-      if (child.type.name === "tableRowGroup") {
+      if (child.type.name === 'tableRowGroup') {
         child.forEach((row) => {
-          if (row.type.name === "tableRow") {
+          if (row.type.name === 'tableRow') {
             if (row.childCount > _maxCellCount) {
               _maxCellCount = row.childCount;
             }
           }
         });
-      } else if (child.type.name === "tableRow") {
+      } else if (child.type.name === 'tableRow') {
         if (child.childCount > _maxCellCount) {
           _maxCellCount = child.childCount;
         }
@@ -178,29 +191,29 @@ export class TablePlusNodeView {
     this.maxCellCount = _maxCellCount;
 
     function getColumnSizeList(columnSize: string) {
-      const arr: string[] = columnSize.split(",").map((str) => str.trim());
+      const arr: string[] = columnSize.split(',').map((str) => str.trim());
 
       const numbers: number[] = arr.every(
-        (item) => item !== "" && !isNaN(Number(item))
+        (item) => item !== '' && !isNaN(Number(item))
       )
         ? arr.map(Number)
         : [];
       return numbers;
     }
 
-    this.dom.style.setProperty("--cell-count", this.maxCellCount.toString());
+    this.dom.style.setProperty('--cell-count', this.maxCellCount.toString());
 
     this.cellPercentage = Array(this.maxCellCount).fill(
       Math.floor(100 / this.maxCellCount)
     );
     const columnSize = getColumnSizeList(this.columnSize);
-    if(columnSize.length == this.maxCellCount) {
+    if (columnSize.length == this.maxCellCount) {
       this.cellPercentage = columnSize;
     }
 
     this.dom.style.setProperty(
-      "--cell-percentage",
-      this.cellPercentage.map((a) => `${a}%`).join(" ")
+      '--cell-percentage',
+      this.cellPercentage.map((a) => `${a}%`).join(' ')
     );
     this.updateHandles();
   }
@@ -220,20 +233,20 @@ export class TablePlusNodeView {
 
   updateValues(_values: number[], updateNode: boolean = false) {
     this.dom.style.setProperty(
-      "--cell-percentage",
-      _values.map((a) => `${a}%`).join(" ")
+      '--cell-percentage',
+      _values.map((a) => `${a}%`).join(' ')
     );
     if (updateNode) {
       this.editor.commands.command(({ tr }) => {
         const pos = this.getPos();
 
-        if (typeof pos !== "number") {
+        if (typeof pos !== 'number') {
           return false;
         }
 
         tr.setNodeMarkup(pos, undefined, {
           ...this.node.attrs,
-          columnSize: _values.map((a) => a.toString()).join(","),
+          columnSize: _values.map((a) => a.toString()).join(','),
         });
 
         return true;
